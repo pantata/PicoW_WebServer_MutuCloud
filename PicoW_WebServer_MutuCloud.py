@@ -3,30 +3,31 @@
 # Modified for usage with Mutusoft's wattMetr http://mutusoft.com/kitpages/
 # Code provided without any warranty and is free to use
 
+#Specialni uprava programu pro MutuCLoud zarizeni
+
 import network
 import socket
 import time
 import json
 import urequests
-#from machine import WDT
 from machine import Pin, UART
 import uasyncio as asyncio
 
 
 # Wifi a LAN parametry
-ssid = "jmeno_wifi"
-password = "heslo"
-ip = 'lokalni_IP'
-mask = 'maska_IP'
-gw = 'default_gateway'
-dns = 'dns_server_IP'
+ssid = "Wifi_název"
+password = "Wifi_heslo"
+ip = 'Pevná_IP_addr'
+mask = 'IP_Maska'
+gw = 'Default_Gateway'
+dns = 'DNS_server'
 # Wifi a LAN parametry
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = 'zadejte_dev_id_z_registracniho_mailu'
+dev_id = 'Vložte_dev_id_z_registračního_emailu'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'wattMetr'
+dev_name = 'wattMetr FVE'
 # mutucloud_url neměnte!
 mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
 # MutuCloud parametry
@@ -397,6 +398,9 @@ html5 = """
         Tempmetr.draw(Tempmetr_data, options);
       }
 
+    setTimeout(function () {
+        window.location.reload();
+    }, 60000);
     
 </script>
 
@@ -405,26 +409,29 @@ html5 = """
 </html>
 
 
-<script>
-</script>
-<script>
-</script>
-<script>
-</script>
-<script>
-</script>
-<script>
-</script>
 
-<script>
-</script>
 
-<script>
-</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """
 
-#wdt = WDT(timeout=8000)
 wlan = network.WLAN(network.STA_IF)
 uart0 = UART(0, baudrate=115200, tx=Pin(0), rx=Pin(1), rxbuf=4096, timeout_char = 100)
 rxData = bytes()
@@ -432,19 +439,19 @@ rxDataStr = "<undefined>"
 json_decoded = json.loads('{}')
 err_in_json = 0
 
-
-
 def connect_to_network():
     global ssid, password, wlan
     wlan.active(True)
     wlan.config(pm = 0xa11140) # Disable power-save mode
+    
+    print(ssid, password, wlan)
     wlan.connect(ssid, password)
     max_wait = 20
     while max_wait > 0:
-        if wlan.status() >= 3:
+        if wlan.status() >= 2:
             break
         max_wait -= 1
-        print('Připojuji se k Wifi ...')
+        print('Připojuji se k Wifi ...', wlan.status())
         time.sleep(1)
         #wdt.feed()
         onboard.on()
@@ -452,13 +459,23 @@ def connect_to_network():
         onboard.off()
         
     print('wlan status = ', wlan.status())
-    if (wlan.status() < 0):
-        print('Wifi je nedostupná.')
-    else:
-        print('Wifi připojena.')
+    if (wlan.status() == -1):
+        print('Wifi je spojení přerušeno.')
+    elif (wlan.status() == -2):
+        print('Wifi nenalezena.')
+    elif (wlan.status() == -3):
+         print('Wifi nesprávné heslo.')
+    elif (wlan.status() == 1):
+         print('Wifi pokus o připojení nedokončen.')
+    elif (wlan.status() == 0):
+         print('Wifi žádná v dosahu')
+    elif (wlan.status() == 2 | wlan.status() == 3):
+        print('Wifi připojena')
         wlan.ifconfig((ip, mask, gw, dns))
         status = wlan.ifconfig()
-        print('ip = ' + status[0])
+        print('status = ', status)
+    else:
+        print('Wifi neznámý status: ', wlan.status())
 
 def create_web():
     global rxDataStr, json_decoded
@@ -560,13 +577,13 @@ def push_web():
     for html in create_web():
         data = data + html
         
-    data = data + '\r\n\r\n\r\n\r\n'
+    #data = data + '\r\n\r\n\r\n\r\n'
     #print("pushing data: ", data)
     try:
         print(mutucloud_url, headers)
         response = urequests.post(mutucloud_url, data=data, headers=headers)
-    except:
-         print("Web push error ...")
+    except  Exception as e:
+         print("Web push error ...", e)
     
 async def serve_client(reader, writer):
     print("Client connected")
