@@ -248,7 +248,7 @@ html5 = """
         labels: xEnDenValues,
         datasets: [{
           label: 'Výroba za 1 den [kWh]',
-          backgroundColor: "LimeGreen",
+          backgroundColor: "LawnGreen",
            data: yEnDenValues
         }]
       },
@@ -278,7 +278,7 @@ html5 = """
         labels: xEnRokValues,
         datasets: [{
           label: 'Výroba za 1 Rok [MWh]',
-          backgroundColor: "LimeGreen",
+          backgroundColor: "Green",
           data: yEnRokValues
         }]
       },
@@ -293,7 +293,7 @@ html5 = """
         labels: xEn10RValues,
         datasets: [{
           label: 'Výroba za 10 let [MWh]',
-          backgroundColor: "LimeGreen",
+          backgroundColor: "DarkGreen",
           data: yEn10RValues
         }]
       },
