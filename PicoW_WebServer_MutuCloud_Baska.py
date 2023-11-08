@@ -14,21 +14,22 @@ from machine import Pin, UART
 import uasyncio as asyncio
 
 # Wifi a LAN parametry
-ssid = "Wifi_název"
-password = "Wifi_heslo"
-ip = 'Pevná_IP_addr'
-mask = 'IP_Maska'
-gw = 'Default_Gateway'
-dns = 'DNS_server'
+ssid = "Mutuliho"
+password = "B3ll1nka!1234"
+ip = '10.1.1.7'
+mask = '255.255.255.0'
+gw = '10.1.1.254'
+dns = '8.8.8.8'
 # Wifi a LAN parametry
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = 'zadejte dev_id z emailu'
+dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'wattMetr FVE'
+dev_name = 'wattMetr DEBUG'
 # mutucloud_url neměnte!
-mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
+#mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
+mutucloud_url = 'http://10.1.1.100:88/wmhp.aspx'
 # MutuCloud parametry
 
 onboard = Pin("LED", Pin.OUT, value=0)

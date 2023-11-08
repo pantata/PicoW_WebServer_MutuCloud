@@ -3,7 +3,7 @@
 # Modified for usage with Mutusoft's wattMetr http://mutusoft.com/kitpages/
 # Code provided without any warranty and is free to use
 
-#Specialni uprava programu pro MutuCLoud zarizeni
+#edition for MutuCLoud devices
 
 import network
 import socket
@@ -13,23 +13,24 @@ import urequests
 from machine import Pin, UART
 import uasyncio as asyncio
 
-# Wifi a LAN parametry
-ssid = "Wifi_název"
-password = "Wifi_heslo"
-ip = 'Pevná_IP_addr'
-mask = 'IP_Maska'
+
+# Wifi and LAN parameters
+ssid = "Wifi_name"
+password = "Wifi_password"
+ip = 'Fix_IP_addr'
+mask = 'IP_Mask'
 gw = 'Default_Gateway'
 dns = 'DNS_server'
-# Wifi a LAN parametry
+# Wifi and LAN parameters
 
-# MutuCloud parametry
-# příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = 'zadejte dev_id z emailu'
-# použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'wattMetr FVE'
-# mutucloud_url neměnte!
+# MutuCloud device id received in registration e-mail
+# example dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
+dev_id = 'FDF1EF8A414C0E334B495D2D9CD4BE4E27A3B0AF'
+# set dev_name as per your wish
+dev_name = 'wattMeter PV Nicolaos'
+# do not change mutucloud_url!
 mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
-# MutuCloud parametry
+# MutuCloud parameters
 
 onboard = Pin("LED", Pin.OUT, value=0)
 
@@ -62,7 +63,7 @@ html1 = """<!DOCTYPE html>
 html2 = """
                         <tbody>
                           <tr>
-                            <td style="text-align: left">Datum a Čas:</td>
+                            <td style="text-align: left">Date and Time:</td>
                             <td style="text-align: right"><strong>{TimeStamp}</strong></td>
                           </tr>
                           <tr>
@@ -70,11 +71,11 @@ html2 = """
                             <td style="text-align: right"><strong>{Uptime}</strong></td>
                           </tr>  
                           <tr>
-                            <td style="text-align: left">Energie za den:</td>
+                            <td style="text-align: left">Energy per day:</td>
                             <td style="text-align: right"><strong>{EnergyDay:10.3f} kWh</strong></td>
                           </tr>
                           <tr>
-                            <td style="text-align: left">Energie celkem:</td>
+                            <td style="text-align: left">Energy All:</td>
                             <td style="text-align: right"><strong>{Energy:10.0f} kWh</strong></td>
                           </tr>
                           </tbody>
@@ -181,7 +182,7 @@ html5 = """
       data: {
         labels: xTempValues,
         datasets: [{
-          label: 'Teplota za 12h',
+          label: 'Temperature last 12h',
           fill: false,
           lineTension: 0,
           pointRadius: 2,
@@ -213,7 +214,7 @@ html5 = """
       data: {
         labels: xPwrValues,
         datasets: [{
-          label: 'Výkon za 12h',
+          label: 'Power last 12hrs',
           fill: true,
           lineTension: 0.0,
           pointRadius: 2,
@@ -229,11 +230,11 @@ html5 = """
                     x: {
                         ticks: {
                           callback: function(val, index) {
-                            if (this.getLabelForValue(val) == 0) return 'Nyní';
-                            if (this.getLabelForValue(val) == 32) return 'před 3h';
-                            if (this.getLabelForValue(val) == 64) return 'před 6h';
-                            if (this.getLabelForValue(val) == 96) return 'před 9h';
-                            if (this.getLabelForValue(val) == 127) return 'před 12h';
+                            if (this.getLabelForValue(val) == 0) return 'Now';
+                            if (this.getLabelForValue(val) == 32) return 'before 3h';
+                            if (this.getLabelForValue(val) == 64) return 'before 6h';
+                            if (this.getLabelForValue(val) == 96) return 'before 9h';
+                            if (this.getLabelForValue(val) == 127) return 'before 12h';
                           }
                         },
           }
@@ -246,7 +247,7 @@ html5 = """
       data: {
         labels: xEnDenValues,
         datasets: [{
-          label: 'Výroba za 1 den [kWh]',
+          label: 'Energy per 1 day [kWh]',
           backgroundColor: "LawnGreen",
            data: yEnDenValues
         }]
@@ -261,7 +262,7 @@ html5 = """
       data: {
         labels: xEnMesValues,
         datasets: [{
-          label: 'Výroba za 1 Měsíc [kWh]',
+          label: 'Energy per 1 Month [kWh]',
           backgroundColor: "LimeGreen",
           data: yEnMesValues
         }]
@@ -276,7 +277,7 @@ html5 = """
       data: {
         labels: xEnRokValues,
         datasets: [{
-          label: 'Výroba za 1 Rok [MWh]',
+          label: 'Energy per 1 Year [MWh]',
           backgroundColor: "Green",
           data: yEnRokValues
         }]
@@ -291,7 +292,7 @@ html5 = """
       data: {
         labels: xEn10RValues,
         datasets: [{
-          label: 'Výroba za 10 let [MWh]',
+          label: 'Energy per 10 years [MWh]',
           backgroundColor: "DarkGreen",
           data: yEn10RValues
         }]
@@ -438,7 +439,6 @@ rxDataStr = "<undefined>"
 json_decoded = json.loads('{}')
 err_in_json = 0
 
-
 def connect_to_network():
     global ssid, password, wlan
     wlan.active(True)
@@ -519,6 +519,7 @@ def create_web():
         yenmes_data = yenmes_data + str(en) + ','
         i += 1
         xenmes_data = xenmes_data + str(i) + ','
+
         
     #energie rok
     i = 0
@@ -561,38 +562,29 @@ def create_web():
     return [ aux0, aux1, html3, aux2, html5 ]
 
 def push_web():
-    global err_in_json, mutucloud_url, dev_id, rxDataStr
-    
-    #pokud se maji ukladat na MutuCloud i hruba json data, pak send_json=1 jinak send_json=0
-    send_json = 1
+    global json_decoded, err_in_json, mutucloud_url, dev_id
     
     if (err_in_json == 1 ):
         print("pushing web Skipped ...")
         return
     else:
         print("pushing web")
-    
+    #url = 'http://10.1.1.100:88/wmhp.aspx'
     data = ''
-    json_param = ''
+    headers = {'Content-Type': 'MutuCloudDevId=' + dev_id }
+    #headers = {'Content-Type': 'wattMetr-data' }
     
-    if (send_json):
-        json_param = '&json=1'
-
-    headers  = {'Content-Type': 'MutuCloudDevId=' + dev_id}
-    headers_json = {'Content-Type': 'MutuCloudDevId=' + dev_id + json_param}
-   
     for html in create_web():
         data = data + html
-
+        
+    #data = data + '\r\n\r\n\r\n\r\n'
+    #print("pushing data: ", data)
     try:
         print(mutucloud_url, headers)
         response = urequests.post(mutucloud_url, data=data, headers=headers)
-        if (send_json): 
-            response = urequests.post(mutucloud_url, data=rxDataStr, headers=headers_json)
     except  Exception as e:
          print("Web push error ...", e)
     
-
 async def serve_client(reader, writer):
     print("Client connected")
     request_line = await reader.readline()
