@@ -13,7 +13,6 @@ import urequests
 from machine import Pin, UART
 import uasyncio as asyncio
 
-
 # Wifi a LAN parametry
 ssid = "Wifi_název"
 password = "Wifi_heslo"
@@ -25,7 +24,7 @@ dns = 'DNS_server'
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = 'Vložte_dev_id_z_registračního_emailu'
+dev_id = 'zadejte dev_id z emailu'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
 dev_name = 'wattMetr FVE'
 # mutucloud_url neměnte!
@@ -439,6 +438,7 @@ rxDataStr = "<undefined>"
 json_decoded = json.loads('{}')
 err_in_json = 0
 
+
 def connect_to_network():
     global ssid, password, wlan
     wlan.active(True)
@@ -519,7 +519,6 @@ def create_web():
         yenmes_data = yenmes_data + str(en) + ','
         i += 1
         xenmes_data = xenmes_data + str(i) + ','
-
         
     #energie rok
     i = 0
@@ -562,29 +561,38 @@ def create_web():
     return [ aux0, aux1, html3, aux2, html5 ]
 
 def push_web():
-    global json_decoded, err_in_json, mutucloud_url, dev_id
+    global err_in_json, mutucloud_url, dev_id, rxDataStr
+    
+    #pokud se maji ukladat na MutuCloud i hruba json data, pak send_json=1 jinak send_json=0
+    send_json = 1
     
     if (err_in_json == 1 ):
         print("pushing web Skipped ...")
         return
     else:
         print("pushing web")
-    #url = 'http://10.1.1.100:88/wmhp.aspx'
-    data = ''
-    headers = {'Content-Type': 'MutuCloudDevId=' + dev_id }
-    #headers = {'Content-Type': 'wattMetr-data' }
     
+    data = ''
+    json_param = ''
+    
+    if (send_json):
+        json_param = '&json=1'
+
+    headers  = {'Content-Type': 'MutuCloudDevId=' + dev_id}
+    headers_json = {'Content-Type': 'MutuCloudDevId=' + dev_id + json_param}
+   
     for html in create_web():
         data = data + html
-        
-    #data = data + '\r\n\r\n\r\n\r\n'
-    #print("pushing data: ", data)
+
     try:
         print(mutucloud_url, headers)
         response = urequests.post(mutucloud_url, data=data, headers=headers)
+        if (send_json): 
+            response = urequests.post(mutucloud_url, data=rxDataStr, headers=headers_json)
     except  Exception as e:
          print("Web push error ...", e)
     
+
 async def serve_client(reader, writer):
     print("Client connected")
     request_line = await reader.readline()
