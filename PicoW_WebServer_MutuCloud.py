@@ -564,7 +564,7 @@ def push_web():
     global err_in_json, mutucloud_url, dev_id, rxDataStr
     
     #pokud se maji ukladat na MutuCloud i hruba json data, pak send_json=1 jinak send_json=0
-    send_json = 1
+    send_json = 0
     
     if (err_in_json == 1 ):
         print("pushing web Skipped ...")
