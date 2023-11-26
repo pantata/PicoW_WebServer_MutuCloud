@@ -24,9 +24,9 @@ dns = 'DNS_server'
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = 'zadejte dev_id z emailu'
+dev_id = 'A3701C0BEE8FBA7D8D2A9930307682486B5DBA69'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'wattMetr FVE'
+dev_name = 'BEL-296'
 # mutucloud_url neměnte!
 mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
 # MutuCloud parametry
@@ -48,7 +48,7 @@ html1 = """<!DOCTYPE html>
         <div class="row">
             <div class="col-sm-3"></div>
             <div class="col-sm-6">
-                <img src="http://mutusoft.com/Grafika/mutusoft_picture.png" width="150" />
+                <a href="http://mutusoft.com/kitpages"><img src="http://mutusoft.com/Grafika/mutusoft_picture.png" width="150" /></a>
                 <h2>{DeviceName}</h2>
             </div>
             <div class="col-sm-3"></div>
@@ -77,6 +77,15 @@ html2 = """
                             <td style="text-align: left">Energie celkem:</td>
                             <td style="text-align: right"><strong>{Energy:10.0f} kWh</strong></td>
                           </tr>
+                            <tr>
+                                <td style="text-align: left">Motohodiny:</td>
+                                <td style="text-align: right"><strong>{MotoH:10.1f} h</strong></td>
+                            </tr>                          
+                              
+                            <tr>
+                                <td style="text-align: left">Firmware:</td>
+                                <td style="text-align: right"><strong>{Firmware}</strong></td>
+                            </tr>                          
                           </tbody>
 """                          
                           
@@ -122,6 +131,13 @@ html3 = """
                 <canvas id="pwrChart" style="width:100%;max-width:700px"></canvas>
             </div>
             <div class="col-sm-3"></div>
+        </div>
+        <div class="row">
+          <div class="col-sm-3"></div>
+          <div class="col-sm-6">
+              <canvas id="UIChart" style="width:100%;max-width:700px"></canvas>
+          </div>
+        <div class="col-sm-3"></div>
         </div>
         <div class="row">
             <div class="col-sm-3"></div>
@@ -173,6 +189,10 @@ const AMPS = {Current:10.1f};
 const VOLTS = {Voltage:10.0f}; 
 const WATTS = {Power:10.0f};
 const CELSIUS = {Teplota:10.1f};
+const xUValues = [{xUValues}];
+const yUValues = [{yUValues}];
+const xIValues = [{xIValues}];
+const yIValues = [{yIValues}];
 """
 
 html5 = """ 
@@ -181,7 +201,7 @@ html5 = """
       data: {
         labels: xTempValues,
         datasets: [{
-          label: 'Teplota za 12h',
+          label: 'Teplota [°C]',
           fill: false,
           lineTension: 0,
           pointRadius: 2,
@@ -213,7 +233,7 @@ html5 = """
       data: {
         labels: xPwrValues,
         datasets: [{
-          label: 'Výkon za 12h',
+          label: 'Výkon [kW]',
           fill: true,
           lineTension: 0.0,
           pointRadius: 2,
@@ -239,6 +259,65 @@ html5 = """
           }
         }
       }
+    });
+    
+    new Chart("UIChart", {
+    type: "line",
+    data: {
+        labels: xUValues,
+        datasets: [{
+            yAxisID: 'y1',
+            label: 'Napětí [V]',
+            fill: false,
+            lineTension: 0.0,
+            pointRadius: 2,
+            borderWidth: 2,
+            backgroundColor: "LightBlue",
+            borderColor: "DarkSlateBlue",
+            data: yUValues
+            },
+            {
+            yAxisID: 'y2',
+            label: 'Proud [A]',
+            fill: false,
+            lineTension: 0.0,
+            pointRadius: 2,
+            borderWidth: 2,
+            backgroundColor: "Tomato",
+            borderColor: "Crimson",
+            data: yIValues
+            },
+        ]
+    },
+    options: {
+        legend: { display: false },
+        scales: {
+            x: {
+                ticks: {
+                    callback: function (val, index) {
+                        if (this.getLabelForValue(val) == 0) return 'Nyní';
+                        if (this.getLabelForValue(val) == 32) return 'před 3h';
+                        if (this.getLabelForValue(val) == 64) return 'před 6h';
+                        if (this.getLabelForValue(val) == 96) return 'před 9h';
+                        if (this.getLabelForValue(val) == 127) return 'před 12h';
+                    }
+                },
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                grid: { display: false },
+            },
+            y2: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grid: { display: false },
+            }
+
+        }
+        }
     });
 
     new Chart("enDeChart", {
@@ -429,6 +508,17 @@ html5 = """
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 """
 
 wlan = network.WLAN(network.STA_IF)
@@ -539,6 +629,24 @@ def create_web():
         i += 1
         xen10r_data = xen10r_data + str(i) + ','
          
+    #napeti
+    i = 0
+    xU_data = ''
+    yU_data = ''
+    for volt in json_decoded['Voltage12h[V]']:
+        yU_data = yU_data + str(volt) + ','
+        i += 1
+        xU_data = xU_data + str(i) + ','         
+         
+    #proud
+    i = 0
+    xI_data = ''
+    yI_data = ''
+    for amp in json_decoded['Current12h[A]']:
+        yI_data = yI_data + str(amp) + ','
+        i += 1
+        xI_data = xI_data + str(i) + ','  
+
     # uptime
     time = json_decoded['Uptime[s]']
 
@@ -553,9 +661,11 @@ def create_web():
     #html0 = 'HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n'
     #html1
     aux0 = html1.format(DeviceName = dev_name)
-    aux1 = html2.format(TimeStamp = json_decoded['TimeStamp'], EnergyDay = json_decoded['EnergyDayAcc[kWh]'], Energy = json_decoded['EnergyAllAcc[kWh]'], Uptime = uptime)
+    aux1 = html2.format(TimeStamp = json_decoded['TimeStamp'], EnergyDay = json_decoded['EnergyDayAcc[kWh]'], Energy = json_decoded['EnergyAllAcc[kWh]'], Uptime = uptime, MotoH = json_decoded['MotoH[h]'], Firmware = json_decoded['Firmware'])
     #html3
-    aux2 = html4.format(xTempValues = xtemp_data, yTempValues = ytemp_data, xPwrValues = xpwr_data, yPwrValues = ypwr_data, xEnDenValues = xenden_data, yEnDenValues = yenden_data, xEnMesValues = xenmes_data, yEnMesValues = yenmes_data, xEnRokValues = xenrok_data, yEnRokValues = yenrok_data, xEn10RValues = xen10r_data, yEn10RValues = yen10r_data, Voltage = json_decoded['Voltage[V]'], Current = json_decoded['Current[A]'], Power = json_decoded['Power[W]'], Teplota = json_decoded['Temperature[C]'] )
+    aux2 = html4.format(xTempValues = xtemp_data, yTempValues = ytemp_data, xPwrValues = xpwr_data, yPwrValues = ypwr_data, xUValues = xU_data, yUValues = yU_data, xIValues = xI_data, yIValues = yI_data, xEnDenValues = xenden_data, yEnDenValues = yenden_data, xEnMesValues = xenmes_data, yEnMesValues = yenmes_data, xEnRokValues = xenrok_data, yEnRokValues = yenrok_data, xEn10RValues = xen10r_data, yEn10RValues = yen10r_data, Voltage = json_decoded['Voltage[V]'], Current = json_decoded['Current[A]'], Power = json_decoded['Power[W]'], Teplota = json_decoded['Temperature[C]'] )
+    
+    #print(json_decoded)
     
     #return [ html0, html1, html2, html3, html4, html5 ]
     return [ aux0, aux1, html3, aux2, html5 ]
@@ -563,7 +673,7 @@ def create_web():
 def push_web():
     global err_in_json, mutucloud_url, dev_id, rxDataStr
     
-    #pokud se maji ukladat na MutuCloud i hruba json data, pak send_json=1 jinak send_json=0
+    #pokud se maji ukladat i hruba json data, pak send_json=1 jinak send_json=0
     send_json = 0
     
     if (err_in_json == 1 ):
@@ -589,10 +699,10 @@ def push_web():
         response = urequests.post(mutucloud_url, data=data, headers=headers)
         if (send_json): 
             response = urequests.post(mutucloud_url, data=rxDataStr, headers=headers_json)
+        print(response)
     except  Exception as e:
          print("Web push error ...", e)
     
-
 async def serve_client(reader, writer):
     print("Client connected")
     request_line = await reader.readline()
@@ -624,12 +734,14 @@ def uart0_rxh():
     except:
         print('JSON not parsed')
         err_in_json = 1
-        
+      
+    print(rxData)
+    
     if (err_in_json == 0):
         json_decoded = decoded_tmp
-    else:
-        json_decoded = json.loads('{}')
-    
+    #else:
+        #json_decoded = json.loads('{}')
+        
 async def main():
     #global wdt
     onboard.on()
@@ -657,7 +769,7 @@ async def main():
         else:
             onboard.off()
             connect_to_network()
-        if (push_timer >= 60):
+        if (push_timer >= 10):
             push_timer = 0
             push_web()
         push_timer = push_timer + 1
@@ -667,5 +779,9 @@ async def main():
 
 try:
     asyncio.run(main())
+except Exception as e:
+    print("Run Error: ", e)
 finally:
-    print ("Program ukončen ...")
+    print ("Program ukončen ... restart")
+    time.sleep(5)
+    machine.reset()
