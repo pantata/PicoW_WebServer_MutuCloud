@@ -4,6 +4,7 @@
 # Code provided without any warranty and is free to use
 
 #Specialni uprava programu pro MutuCLoud zarizeni
+#Urceno pro verzi FW wattMetru v20231111CZ
 
 import network
 import socket
@@ -24,7 +25,7 @@ dns = 'DNS_server'
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
+dev_id = 'DA7DD9E4AD01061906CAB0A6101C2E7156A09A2C'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
 dev_name = 'FVE'
 # mutucloud_url neměnte!
