@@ -769,7 +769,7 @@ async def main():
         else:
             onboard.off()
             connect_to_network()
-        if (push_timer >= 10):
+        if (push_timer >= 60):
             push_timer = 0
             push_web()
         push_timer = push_timer + 1
