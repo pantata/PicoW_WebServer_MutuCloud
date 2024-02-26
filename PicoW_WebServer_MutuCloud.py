@@ -3,7 +3,8 @@
 # Modified for usage with Mutusoft's wattMetr http://mutusoft.com/kitpages/
 # Code provided without any warranty and is free to use
 
-#Specialni uprava programu pro MutuCLoud zarizeni
+#verze 20242602
+
 
 import network
 import socket
@@ -14,8 +15,12 @@ from machine import Pin, UART
 import uasyncio as asyncio
 
 # Wifi a LAN parametry
-ssid = "Wifi_název"
-password = "Wifi_heslo"
+ssid = "Mutuliho"
+password = "B3ll1nka!1234"
+
+# pokud je dhcp = 1, pak parametry ip, mask, gw ani dns neni potreba vyplnovat
+# pro zadani pevne IP adresy a parametru LAN site, zadejte dhcp = 0
+dhcp = 1
 ip = 'Pevná_IP_addr'
 mask = 'IP_Maska'
 gw = 'Default_Gateway'
@@ -24,7 +29,7 @@ dns = 'DNS_server'
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
+dev_id = 'DA7DD9E4AD01061906CAB0A6101C2E7156A09A2C'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
 dev_name = 'FVE'
 # mutucloud_url neměnte!
@@ -530,7 +535,7 @@ err_in_json = 0
 
 
 def connect_to_network():
-    global ssid, password, wlan
+    global ssid, password, wlan, dhcp
     wlan.active(True)
     wlan.config(pm = 0xa11140) # Disable power-save mode
     
@@ -561,7 +566,8 @@ def connect_to_network():
          print('Wifi žádná v dosahu')
     elif (wlan.status() == 2 | wlan.status() == 3):
         print('Wifi připojena')
-        wlan.ifconfig((ip, mask, gw, dns))
+        if(!dhcp):
+            wlan.ifconfig((ip, mask, gw, dns))
         status = wlan.ifconfig()
         print('status = ', status)
     else:
