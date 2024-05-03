@@ -5,19 +5,24 @@
 
 #verze 20242602
 
+# LSL upravy
+# pridana volda povolit/zakazat mutucloud
+# pridana volba odeslat data na Thingspeak
+# doplneno zobrazeni interni teploty procesoru z RPI
 
 import network
 import socket
 import time
 import json
 import urequests
-from machine import Pin, UART
+from machine import Pin, UART, ADC
 import uasyncio as asyncio
 
 # Wifi a LAN parametry
-ssid = "Wifi_název"
-password = "Wifi_heslo"
+ssid = "SSID"
+password = "HESLO"
 
+# Wifi a LAN parametry
 # pokud je dhcp = 1, pak parametry ip, mask, gw ani dns neni potreba vyplnovat
 # pro zadani pevne IP adresy a parametru LAN site, zadejte dhcp = 0
 dhcp = 1
@@ -25,35 +30,45 @@ ip = 'Pevná_IP_addr'
 mask = 'IP_Maska'
 gw = 'Default_Gateway'
 dns = 'DNS_server'
-# Wifi a LAN parametry
+
+
+#thingspeak parametry
+thingspeak = True
+tsApiKey = "WRITEAPIKEY"
+tsTimeout = 300
+urlThing = 'https://api.thingspeak.com/update?api_key={tsApiKey}&field1={Temperature}&field2={Current}&field3={Voltage}&field4={Power}&field5={SystemTemperature}'
 
 # MutuCloud parametry
+mutucloud = False
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = '416D7F0D4FE583574E90509CEC68F68FA3B945FC'
+dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'FVE'
+dev_name = 'Watt Metr'
 # mutucloud_url neměnte!
 mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
-# MutuCloud parametry
 
+#signalizace
 onboard = Pin("LED", Pin.OUT, value=0)
+
+#mereni interni teploty teploty RPI
+sensor_temp = machine.ADC(4)
+conversion_factor = 3.3 / (65535)
 
 html1 = """<!DOCTYPE html>
 <html>
     <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>wattMetr web by Mutusoft.com</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>wattMetr web by Mutusoft.com</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     </head>
     <body>
     <div class="container text-center">
         <div class="row">
             <div class="col-sm-3"></div>
             <div class="col-sm-6">
-                <a href="http://mutusoft.com/kitpages"><img src="http://mutusoft.com/Grafika/mutusoft_picture.png" width="150" /></a>
                 <h2>{DeviceName}</h2>
             </div>
             <div class="col-sm-3"></div>
@@ -86,7 +101,10 @@ html2 = """
                                 <td style="text-align: left">Motohodiny:</td>
                                 <td style="text-align: right"><strong>{MotoH:10.1f} h</strong></td>
                             </tr>                          
-                              
+                            <tr>
+                                <td style="text-align: left">Teplota rozvaděče</td>
+                                <td style="text-align: right"><strong>{Temperature:10.1f}&deg;C</strong></td>
+                            </tr>                                
                             <tr>
                                 <td style="text-align: left">Firmware:</td>
                                 <td style="text-align: right"><strong>{Firmware}</strong></td>
@@ -575,84 +593,110 @@ def connect_to_network():
 
 def create_web():
     global rxDataStr, json_decoded
+    global sensor_temp, conversion_factor
     global html1,html2,html3,html4,html5
     #json_decoded = json.loads(rxDataStr)
-    #print(rxDataStr)
+    print(json_decoded)
     if (len(json_decoded) == 0):
         return [ '<h2>No Data Received</h2>', '', '', '', '' ]
     i = 0
     ytemp_data = ''
     xtemp_data = ''
-    for temp in json_decoded['Temp12h[C]']:
-        #temp_data = temp_data + '{x:' + str(i) + ',y:' + str(temp) + '},\n'
-        ytemp_data = ytemp_data + str(temp) + ','
-        xtemp_data = xtemp_data + str(i) + ','
-        i += 1
-
+    try:
+        for temp in json_decoded['Temp12h[C]']:
+            #temp_data = temp_data + '{x:' + str(i) + ',y:' + str(temp) + '},\n'
+            ytemp_data = ytemp_data + str(temp) + ','
+            xtemp_data = xtemp_data + str(i) + ','
+            i += 1
+    except:
+        pass
+    
     #vykon
     i = 0
     xpwr_data = ''
     ypwr_data = ''
-    for pwr in json_decoded['Power12h[kW]']:
-        ypwr_data = ypwr_data + str(pwr) + ','
-        xpwr_data = xpwr_data + str(i) + ','
-        i += 1
-   
+    try:
+        for pwr in json_decoded['Power12h[kW]']:
+            ypwr_data = ypwr_data + str(pwr) + ','
+            xpwr_data = xpwr_data + str(i) + ','
+            i += 1
+    except:
+        pass
+    
     #energie den
     i = 0
     xenden_data = ''
     yenden_data = ''
-    for en in json_decoded['EnergyDay[kWh]']:
-        yenden_data = yenden_data + str(en) + ','
-        xenden_data = xenden_data + str(i) + ','
-        i += 1
-   
+    try:
+        for en in json_decoded['EnergyDay[kWh]']:
+            yenden_data = yenden_data + str(en) + ','
+            xenden_data = xenden_data + str(i) + ','
+            i += 1
+    except:
+        pass
+    
     #energie mesic
     i = 0
     xenmes_data = ''
     yenmes_data = ''
-    for en in json_decoded['EnergyMonth[kWh]']:
-        yenmes_data = yenmes_data + str(en) + ','
-        i += 1
-        xenmes_data = xenmes_data + str(i) + ','
-        
+    try:
+        for en in json_decoded['EnergyMonth[kWh]']:
+            yenmes_data = yenmes_data + str(en) + ','
+            i += 1
+            xenmes_data = xenmes_data + str(i) + ','
+    except:
+        pass
+    
     #energie rok
     i = 0
     xenrok_data = ''
     yenrok_data = ''
-    for en in json_decoded['EnergyYear[MWh]']:
-        yenrok_data = yenrok_data + str(en) + ','
-        i += 1
-        xenrok_data = xenrok_data + str(i) + ','
-
+    try:
+        for en in json_decoded['EnergyYear[MWh]']:
+            yenrok_data = yenrok_data + str(en) + ','
+            i += 1
+            xenrok_data = xenrok_data + str(i) + ','
+    except:
+        pass
         
     #energie 10 let
     i = 0
     xen10r_data = ''
     yen10r_data = ''
-    for en in json_decoded['Energy10Y[MWh]']:
-        yen10r_data = yen10r_data + str(en) + ','
-        i += 1
-        xen10r_data = xen10r_data + str(i) + ','
-         
+    
+    try:
+        for en in json_decoded['Energy10Y[MWh]']:
+            yen10r_data = yen10r_data + str(en) + ','
+            i += 1
+            xen10r_data = xen10r_data + str(i) + ','
+    except:
+        pass
+    
     #napeti
     i = 0
     xU_data = ''
     yU_data = ''
-    for volt in json_decoded['Voltage12h[V]']:
-        yU_data = yU_data + str(volt) + ','
-        i += 1
-        xU_data = xU_data + str(i) + ','         
-         
+    
+    try:
+        for volt in json_decoded['Voltage12h[V]']:
+            yU_data = yU_data + str(volt) + ','
+            i += 1
+            xU_data = xU_data + str(i) + ','         
+    except:
+        pass
+    
     #proud
     i = 0
     xI_data = ''
     yI_data = ''
-    for amp in json_decoded['Current12h[A]']:
-        yI_data = yI_data + str(amp) + ','
-        i += 1
-        xI_data = xI_data + str(i) + ','  
-
+    try:
+        for amp in json_decoded['Current12h[A]']:
+            yI_data = yI_data + str(amp) + ','
+            i += 1
+            xI_data = xI_data + str(i) + ','  
+    except:
+        pass
+    
     # uptime
     time = json_decoded['Uptime[s]']
 
@@ -664,16 +708,25 @@ def create_web():
     time %= 60
     seconds = time
     uptime = ( "%dd, %dh, %dmin, %ds" % (day, hour, minutes, seconds))
-    #html0 = 'HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n'
-    #html1
+    
+    energyDay = 0
+    energy = 0
+    motoH = 0
+    firmware = '1.0.0'
+    temperature = getSysTemperature()
+    
+    try:
+        energyDay = json_decoded['EnergyDayAcc[kWh]']
+        energy = json_decoded['EnergyAllAcc[kWh]']
+        motoH = json_decoded['MotoH[h]']
+        firmware = json_decoded['Firmware']
+    except:
+        pass
+        
     aux0 = html1.format(DeviceName = dev_name)
-    aux1 = html2.format(TimeStamp = json_decoded['TimeStamp'], EnergyDay = json_decoded['EnergyDayAcc[kWh]'], Energy = json_decoded['EnergyAllAcc[kWh]'], Uptime = uptime, MotoH = json_decoded['MotoH[h]'], Firmware = json_decoded['Firmware'])
-    #html3
+    aux1 = html2.format(TimeStamp = json_decoded['TimeStamp'], EnergyDay = energyDay, Energy = energy, Uptime = uptime, MotoH = motoH, Firmware = firmware, Temperature = temperature)
     aux2 = html4.format(xTempValues = xtemp_data, yTempValues = ytemp_data, xPwrValues = xpwr_data, yPwrValues = ypwr_data, xUValues = xU_data, yUValues = yU_data, xIValues = xI_data, yIValues = yI_data, xEnDenValues = xenden_data, yEnDenValues = yenden_data, xEnMesValues = xenmes_data, yEnMesValues = yenmes_data, xEnRokValues = xenrok_data, yEnRokValues = yenrok_data, xEn10RValues = xen10r_data, yEn10RValues = yen10r_data, Voltage = json_decoded['Voltage[V]'], Current = json_decoded['Current[A]'], Power = json_decoded['Power[W]'], Teplota = json_decoded['Temperature[C]'] )
     
-    #print(json_decoded)
-    
-    #return [ html0, html1, html2, html3, html4, html5 ]
     return [ aux0, aux1, html3, aux2, html5 ]
 
 def push_web():
@@ -708,6 +761,49 @@ def push_web():
         print(response)
     except  Exception as e:
          print("Web push error ...", e)
+
+def getSysTemperature():
+    global sensor_temp, conversion_factor
+
+    try:
+      reading = sensor_temp.read_u16() * conversion_factor
+      systemtemperature = 27 - (reading - 0.706)/0.001721
+      return systemtemperature
+    except:
+      return 0
+
+def push_thingspeak():
+    global err_in_json, urlThing, json_decoded
+
+    if (len(json_decoded) == 0):
+        return
+        
+    if (err_in_json == 1 ):
+        print("pushing data Skipped ...")
+        return
+    else:
+        print("pushing data")
+
+    power = 0
+    temperature = 0
+    voltage = 0
+    current = 0
+    systemtemperature = getSysTemperature()
+ 
+    try:
+        temperature = json_decoded['Temperature[C]']
+        voltage = json_decoded['Voltage[V]']
+        current = json_decoded['Current[A]'] 
+        power = json_decoded['Power[W]']        
+    except:
+        pass
+
+    try:        
+        dataUrl = urlThing.format(tsApiKey = tsApiKey, Temperature = temperature,Current = current,Voltage = voltage, Power = power, SystemTemperature = systemtemperature)
+        response = urequests.get(dataUrl)
+        print(response)
+    except:
+        pass
     
 async def serve_client(reader, writer):
     print("Client connected")
@@ -723,10 +819,9 @@ async def serve_client(reader, writer):
     await writer.wait_closed()
     print("Client disconnected")
 
-
 def uart0_rxh():
     global rxDataStr, json_decoded, err_in_json
-    
+    print('READ UART')
     while uart0.any() > 0:
         print('Rx chars = ',uart0.any())
         rxData = uart0.read()
@@ -749,7 +844,6 @@ def uart0_rxh():
         #json_decoded = json.loads('{}')
         
 async def main():
-    #global wdt
     onboard.on()
     print('Startuju main()')
     time.sleep(1)
@@ -760,10 +854,13 @@ async def main():
     print('Startuju webserver...')
     asyncio.create_task(asyncio.start_server(serve_client, "0.0.0.0", 80))
     push_timer = 0
+    timeoutThing = 0
+
+    #hlavni smycka
     while True:
         if (uart0.any()):
             uart0_rxh()
-
+         
         status = wlan.ifconfig()
         if (wlan.isconnected()):
             if (status[0] != ''):
@@ -774,12 +871,23 @@ async def main():
                 onboard.off()
         else:
             onboard.off()
-            connect_to_network()
-        if (push_timer >= 60):
-            push_timer = 0
-            push_web()
-        push_timer = push_timer + 1
-        #wdt.feed()        
+            connect_to_network()        
+
+        #odeslani na mutucloud        
+        if mutucloud:
+          if (push_timer >= 60):
+            push_timer = 0            
+            push_web()            
+          push_timer = push_timer + 1
+
+        #odeslani na thingspeak
+        if thingspeak:
+          if timeoutThing <= 0:
+              timeoutThing = tsTimeout
+              push_thingspeak()
+          timeoutThing = timeoutThing - 1
+       
+        #sleep, at to nejede na doraz
         await asyncio.sleep(1)
 
 
