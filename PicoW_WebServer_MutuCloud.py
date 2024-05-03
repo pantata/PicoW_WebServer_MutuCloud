@@ -6,7 +6,7 @@
 #verze 20242602
 
 # LSL upravy
-# pridana volda povolit/zakazat mutucloud
+# pridana volba povolit/zakazat mutucloud
 # pridana volba odeslat data na Thingspeak
 # doplneno zobrazeni interni teploty procesoru z RPI
 
