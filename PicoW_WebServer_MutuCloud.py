@@ -3,8 +3,7 @@
 # Modified for usage with Mutusoft's wattMetr http://mutusoft.com/kitpages/
 # Code provided without any warranty and is free to use
 
-#verze 20242602
-
+#verze 20250110
 
 import network
 import socket
@@ -13,10 +12,11 @@ import json
 import urequests
 from machine import Pin, UART
 import uasyncio as asyncio
+import struct
 
 # Wifi a LAN parametry
-ssid = "Wifi_název"
-password = "Wifi_heslo"
+ssid = "nastavte"
+password = "nastavte"
 
 # pokud je dhcp = 1, pak parametry ip, mask, gw ani dns neni potreba vyplnovat
 # pro zadani pevne IP adresy a parametru LAN site, zadejte dhcp = 0
@@ -29,12 +29,30 @@ dns = 'DNS_server'
 
 # MutuCloud parametry
 # příklad dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
-dev_id = '416D7F0D4FE583574E90509CEC68F68FA3B945FC'
+dev_id = '8389CE2A1A9A48FBA1859696EF1CB2CB6C157CA8'
 # použijte dle svého uvážení, příklad dev_name = 'wattMetr v ložnici'
-dev_name = 'FVE'
+dev_name = 'wattMetr TEST'
 # mutucloud_url neměnte!
 mutucloud_url = 'http://mutusoft.com/kitpages/wmhp.aspx'
 # MutuCloud parametry
+
+
+# Obnova hodnot historie
+# pokud je Write_History=1, pak se po startu PicoW zapisi do wattMetru nasledujici hodnoty (mozne vyuzit po upgrade FW, kdy dochazi ke ztrate historie)
+# po zapisu dat do wattmetru, je dobre nastavit Write_History=0
+Write_History=1
+# zadani ID - int(x) - za x zadejte libovolne cislo mezi 1-255, pro zapis historickych hodnot je potreba, aby bylo ID jine nez pri predchozim zapisu historickych dat
+# vzdy, kdyz dojde ke zmene ID a Write_History=1, wattmetr zapise nize uvedena data do Flash 
+History_ID = int(155)
+# nasledujici hodnoty zadavejte jako cisla s desetinnou carkou (float)
+# v hodinach
+History_Motohodiny = 99999.9
+# ve WattHodinach
+History_EnergieCelkem = 55555555.9
+# v MegaWattHodinach
+History_Mesice = [  11.99, 10.99, 9.99, 8.99, 7.99, 6.99, 5.99, 4.99, 3.99, 2.99, 1.99, 5.99 ]
+# v MegaWattHodinach
+History_Roky10 = [  9.99, 8.99, 7.99, 6.99, 5.99, 4.99, 3.99, 2.99, 1.99, 5.99 ]
 
 onboard = Pin("LED", Pin.OUT, value=0)
 
@@ -748,6 +766,35 @@ def uart0_rxh():
     #else:
         #json_decoded = json.loads('{}')
         
+def uart0_write_history():
+    # ba = bytearray(struct.pack("f", value))
+    # interval mezi jednotlivymi uart0.write(ba) je cca 1.8ms
+    # motohodiny
+    uart0.write('START\0')
+    ba = bytearray(struct.pack("f", History_Motohodiny))
+    print('History_Motohodiny:', [ "0x%02x" % b for b in ba ])
+    uart0.write(ba)
+    # energie celkem
+    ba = bytearray(struct.pack("f", History_EnergieCelkem))
+    print('History_EnergieCelkem:', [ "0x%02x" % b for b in ba ])
+    uart0.write(ba)
+    # mesicni historie
+    for mesic in range(12):
+        ba = bytearray(struct.pack("f", History_Mesice[mesic]))
+        print('Mesic ', mesic, ': ', [ "0x%02x" % b for b in ba ])
+        uart0.write(ba)
+    # desetileta historie
+    for rok in range(10):
+        ba = bytearray(struct.pack("f", History_Roky10[rok]))
+        print('Rok ', rok, ': ', [ "0x%02x" % b for b in ba ])
+        uart0.write(ba)
+    # history ID
+    ba = bytearray(struct.pack("i", History_ID))
+    uart0.write(ba) 
+    # konec
+    uart0.write('FINISH\0')
+    
+        
 async def main():
     #global wdt
     onboard.on()
@@ -761,6 +808,9 @@ async def main():
     asyncio.create_task(asyncio.start_server(serve_client, "0.0.0.0", 80))
     push_timer = 0
     while True:
+        if (Write_History):
+            uart0_write_history()
+            
         if (uart0.any()):
             uart0_rxh()
 
